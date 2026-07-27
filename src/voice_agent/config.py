@@ -62,7 +62,11 @@ class LLMConfig:
     model: str = os.getenv("VA_LLM_MODEL", "qwen2.5:7b-instruct")
     temperature: float = _env_float("VA_LLM_TEMPERATURE", 0.2)
     max_tokens: int = int(os.getenv("VA_LLM_MAX_TOKENS", "1200"))
-    request_timeout: float = _env_float("VA_LLM_TIMEOUT", 180.0)
+    # Generous on purpose. A T4 that has had to spill the model to CPU runs at
+    # single-digit tokens/sec, and a slow answer is far more diagnosable than a
+    # timeout stack trace. If you hit this ceiling, the real problem is almost
+    # always VRAM pressure - check `ollama ps` shows 100% GPU.
+    request_timeout: float = _env_float("VA_LLM_TIMEOUT", 300.0)
     max_retries: int = int(os.getenv("VA_LLM_RETRIES", "3"))
 
 

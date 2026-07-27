@@ -186,25 +186,29 @@ def render_report(rows: list[dict], failures: list[str]) -> str:
     return "\n".join(out)
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--update-golden", action="store_true")
-    parser.add_argument("--no-speak", action="store_true", help="skip TTS to run faster")
-    parser.add_argument("--samples", nargs="*", help="filenames under assets/audio")
-    args = parser.parse_args()
+def run_gate(
+    agent: "ScreeningAgent | None" = None,
+    samples: "list[str] | None" = None,
+    speak: bool = False,
+    update_golden: bool = False,
+) -> int:
+    """Run the gate, optionally against an already-loaded agent.
 
+    Pass `agent` when calling from a notebook that has models resident. Spawning
+    this as a subprocess instead loads a second copy of Whisper and BGE-M3 into
+    VRAM, and on a 15 GB T4 that is enough to push Ollama off the GPU and onto
+    the CPU, where generation is slow enough to hit the request timeout.
+    """
     files = (
-        [AUDIO_DIR / s for s in args.samples]
-        if args.samples
-        else sorted(AUDIO_DIR.glob("*.mp3"))
+        [AUDIO_DIR / s for s in samples] if samples else sorted(AUDIO_DIR.glob("*.mp3"))
     )
     if not files:
         print(f"No sample audio found in {AUDIO_DIR}", file=sys.stderr)
         return 2
 
-    agent = ScreeningAgent()
+    agent = agent or ScreeningAgent()
     ok, msg = agent.llm.health()
-    print(("LLM: " + msg))
+    print("LLM: " + msg)
     if not ok:
         print("Aborting - the LLM must be reachable to run the gate.", file=sys.stderr)
         return 2
@@ -218,7 +222,7 @@ def main() -> int:
         result = agent.run(
             str(path),
             follow_up_provider=None,  # batch: record the decision, score the original
-            speak=not args.no_speak,
+            speak=speak,
             out_path=ARTIFACT_DIR / f"{path.stem}_evaluation.wav",
         )
         row = summarise(path.name, result)
@@ -228,7 +232,7 @@ def main() -> int:
         print(f"  {row['justification']}")
 
     # Score drift against the baseline.
-    if GOLDEN_PATH.exists() and not args.update_golden:
+    if GOLDEN_PATH.exists() and not update_golden:
         golden = {r["sample"]: r for r in json.loads(GOLDEN_PATH.read_text(encoding="utf-8"))}
         drifted = 0
         for row in rows:
@@ -253,7 +257,7 @@ def main() -> int:
                 f"{drifted} samples each drifted a point in the same run - "
                 "individually tolerable, together a signal the scoring band shifted."
             )
-    elif args.update_golden or not GOLDEN_PATH.exists():
+    elif update_golden or not GOLDEN_PATH.exists():
         GOLDEN_PATH.parent.mkdir(parents=True, exist_ok=True)
         GOLDEN_PATH.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"\nBaseline written to {GOLDEN_PATH.relative_to(REPO_ROOT)}")
@@ -272,6 +276,19 @@ def main() -> int:
         return 1
     print("\n✅ QUALITY GATE PASSED")
     return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--update-golden", action="store_true")
+    parser.add_argument("--no-speak", action="store_true", help="skip TTS to run faster")
+    parser.add_argument("--samples", nargs="*", help="filenames under assets/audio")
+    args = parser.parse_args()
+    return run_gate(
+        samples=args.samples,
+        speak=not args.no_speak,
+        update_golden=args.update_golden,
+    )
 
 
 if __name__ == "__main__":
