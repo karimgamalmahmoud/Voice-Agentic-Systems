@@ -1,0 +1,30 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+.venv/
+venv/
+env/
+
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Generated at runtime: synthesised speech, quality-gate json dumps
+artifacts/
+
+# Model caches, should never be committed
+.cache/
+hf_cache/
+
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Notebook execution noise
+.ipynb_checkpoints/
