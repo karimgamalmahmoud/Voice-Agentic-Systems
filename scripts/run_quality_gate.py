@@ -70,6 +70,20 @@ def check(result: TurnResult, name: str) -> list[str]:
     elif has_arabic(result.evaluation.justification):
         failures.append(f"{name}: answer was English but justification came back in Arabic")
 
+    # The follow-up question is spoken to the candidate too, so it needs the same
+    # language guarantee as the score. This check was missing, and a run duly
+    # answered an English answer with an Arabic follow-up while still passing.
+    question = (result.decision.question or "").strip()
+    if question:
+        if result.transcript.language == "ar" and not has_arabic(question):
+            failures.append(
+                f"{name}: answer was Arabic but the follow-up question was not"
+            )
+        elif result.transcript.language == "en" and has_arabic(question):
+            failures.append(
+                f"{name}: answer was English but the follow-up question came back in Arabic"
+            )
+
     if not 1 <= result.evaluation.score <= 5:
         failures.append(f"{name}: score {result.evaluation.score} outside 1-5")
     if not result.evaluation.justification.strip():

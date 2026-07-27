@@ -62,7 +62,7 @@ from .schemas import (
     TurnResult,
 )
 from .stt import Transcriber
-from .text import strip_foreign_scripts
+from .text import script_language, strip_foreign_scripts
 from .tts import Synthesizer
 
 logger = logging.getLogger(__name__)
@@ -274,16 +274,21 @@ class ScreeningAgent:
         return CoverageReport(assessments=[seen[n] for n in expected if n in seen])
 
     @staticmethod
-    def follow_up_is_usable(text: str) -> bool:
-        """Reject questions that are truncated, empty, or rambling.
+    def follow_up_is_usable(text: str, expected_language: Optional[str] = None) -> bool:
+        """Reject questions that are truncated, rambling, or in the wrong language.
 
-        A real run produced "كيف تتعامل مع إبطال" - "How do you handle
+        Both checks come from real runs.
+
+        Truncation: one run produced "كيف تتعامل مع إبطال" - "How do you handle
         invalidat", cut off mid-word. It passes a naive non-empty check and
-        would have been read aloud to the candidate.
+        would have been read aloud to the candidate. The terminal question mark
+        is what catches it; word count alone let that four-word fragment
+        through.
 
-        The terminal question mark is the signal that actually catches this:
-        truncation almost never lands on one. Word count alone would have let
-        that four-word fragment through.
+        Language: a later run answered an ENGLISH answer with an Arabic
+        follow-up. The prompt asks for the candidate's language and the model
+        ignored it. The scoring path was already language-checked, but nothing
+        checked the question, so it shipped.
         """
         text = (text or "").strip()
         if not text:
@@ -291,7 +296,13 @@ class ScreeningAgent:
         words = text.split()
         if not 4 <= len(words) <= 45:
             return False
-        return text.endswith(("?", "؟"))
+        if not text.endswith(("?", "؟")):
+            return False
+        if expected_language:
+            actual, _ = script_language(text)
+            if actual != expected_language:
+                return False
+        return True
 
     def fallback_follow_up(self, competency: Optional[str], language: str) -> str:
         name = (competency or "").lower()
@@ -328,7 +339,7 @@ class ScreeningAgent:
                 max_tokens=160,
             ).strip().strip('"')
             cleaned = strip_foreign_scripts(raw, context="follow-up question")
-            if self.follow_up_is_usable(cleaned):
+            if self.follow_up_is_usable(cleaned, transcript.language):
                 return cleaned
             logger.warning("Unusable follow-up on attempt %d: %r", attempt, cleaned)
 

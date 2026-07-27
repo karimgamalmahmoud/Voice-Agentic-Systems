@@ -56,6 +56,33 @@ def test_statement_without_question_mark_is_rejected():
     assert usable("Tell me more about how you would handle caching invalidation") is False
 
 
+# -- language fidelity -----------------------------------------------------
+
+
+def test_arabic_followup_to_an_english_answer_is_rejected():
+    """The actual regression: answer_1 was English and got an Arabic probe."""
+    arabic = "كيف ستتعامل مع سيناريو التعادل بين استخدام await وال Mutex أثناء التحقيق؟"
+    assert usable(arabic, "en") is False
+    assert usable(arabic, "ar") is True
+
+
+def test_english_followup_to_an_arabic_answer_is_rejected():
+    english = "How would you spot a blocking call in the request path?"
+    assert usable(english, "ar") is False
+    assert usable(english, "en") is True
+
+
+def test_arabic_question_with_latin_technical_terms_still_counts_as_arabic():
+    """Code-mixing must not trip the language check - this is how Egyptian
+    engineers actually speak."""
+    mixed = "الـ async/await بيساعد فين تحت الـ load، وإزاي تكتشف الـ blocking call؟"
+    assert usable(mixed, "ar") is True
+
+
+def test_language_check_is_skipped_when_no_language_given():
+    assert usable("How would you measure that before changing anything?") is True
+
+
 # -- fallback selection ----------------------------------------------------
 
 
@@ -67,13 +94,13 @@ def test_fallback_matches_competency_and_language():
     assert ar != en
 
 
-def test_every_fallback_is_itself_usable():
+def test_every_fallback_is_itself_usable_and_in_the_right_language():
     """A fallback that fails our own validator would be worse than useless."""
     for competency, variants in FALLBACK_FOLLOW_UPS.items():
         for lang, text in variants.items():
-            assert usable(text), f"{competency}/{lang} is not a usable question"
+            assert usable(text, lang), f"{competency}/{lang} is not a usable {lang} question"
     for lang, text in DEFAULT_FALLBACK_FOLLOW_UP.items():
-        assert usable(text), f"default/{lang} is not a usable question"
+        assert usable(text, lang), f"default/{lang} is not a usable {lang} question"
 
 
 def test_unknown_competency_falls_back_to_the_generic_probe():
