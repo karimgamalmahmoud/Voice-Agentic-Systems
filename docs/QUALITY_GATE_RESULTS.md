@@ -9,9 +9,9 @@ falls back to the original answer. The branch is still exercised and logged.
 
 | Sample | Lang | Followed up | Score | Justification |
 |---|---|---|---|---|
-| answer_1.mp3 | `en` | yes | **4/5** | Candidate systematically addresses the issue by measuring before changing, covers DB optimization (N+1 pattern, missing index), async/await (as no tracking), and caching. However, misses discussing sync-over-async issues and cancellation tokens. |
-| answer_2.mp3 | `ar` | yes | **3/5** | يقول إن يبدأ بالداتابيز ويصيغ حلول للاستيريشن و الكاشينج لكنه لا يذكر الطريقة النظامية للمعاينة والتعديل. |
-| answer_3.mp3 | `ar` | no | **2/5** | أجاب على بعض الجوانب مثل إعادة تشغيل الخادم والموارد، لكنه لم يوضح كيفية التحقق من المشكلة أو استخدام أدوات التشخيص. لم يذكر الـ async/await أو الـ EF Core بشكل صحيح، ولم يتحدث عن الاستراتيجيات المحددة للاستناد إلى الدخول أو التخزين المؤقت. |
+| answer_1.mp3 | `en` | yes | **3/5** | Candidate measures before changing but misses discussing async/await and sync-over-async issues, which are critical in this context. Also, covers DB optimization and caching well. |
+| answer_2.mp3 | `ar` | yes | **2/5** | يتحدث عن الداتابيز والكاش لكن لا يذكر الطريقة النظامية للمعاينة والتغيير ولا يتناول الامور المتعلقة بال وasync/await. |
+| answer_3.mp3 | `ar` | no | **2/5** | يقول إنه يمكن إعادة تشغيل الخادم وزيادة الإمكانيات، لكنه لا يوضح طرق التحقيق النظامية أو استخدام أدوات التشخيص. لم يذكر الـ async/await أو الـ EF Core بشكل صحيح. |
 
 ---
 
@@ -34,14 +34,14 @@ falls back to the original answer. The branch is still exercised and logged.
 
 **Branch decision:** ask a follow-up
 
-> 'Async & concurrency' is partially covered (confidence 0.70, priority 0.95) and is the highest-value resolvable gap of 1 candidate(s). Gap: The candidate did not discuss async/await patterns, sync-over-async issues, or the use of cancellation tokens..
+> 'Async & concurrency' is partially covered (confidence 0.50, priority 0.95) and is the highest-value resolvable gap of 1 candidate(s). Gap: The candidate did not discuss async/await or sync-over-async issues, which are key in this context..
 
-**Follow-up composed:** كيف ستتعامل مع سيناريو التعادل بين استخدام await وال Mutex للتحكم في متزامنية العمليات أثناء التحقيق؟
+**Follow-up composed:** Where exactly does async/await help under load, and how would you spot a blocking call sitting in the request path?
 
-**Score:** 4/5 — Candidate systematically addresses the issue by measuring before changing, covers DB optimization (N+1 pattern, missing index), async/await (as no tracking), and caching. However, misses discussing sync-over-async issues and cancellation tokens.
+**Score:** 3/5 — Candidate measures before changing but misses discussing async/await and sync-over-async issues, which are critical in this context. Also, covers DB optimization and caching well.
 
-- Covered: measures before changing, DB optimization, as no tracking, caching
-- Missed: sync-over-async issues, cancellation tokens
+- Covered: measures before changing, DB optimization, caching
+- Missed: async/await, sync-over-async
 
 ## answer_2.mp3
 
@@ -56,20 +56,20 @@ falls back to the original answer. The branch is still exercised and logged.
 **Coverage**
 
 - Data access (EF Core): `covered`
-- Async & concurrency: `missing`
+- Async & concurrency: `partial`
 - Caching & performance: `covered`
-- Diagnostic method: `partial`
+- Diagnostic method: `missing`
 
 **Branch decision:** ask a follow-up
 
-> 'Diagnostic method' is partially covered (confidence 0.80, priority 1.00) and is the highest-value resolvable gap of 1 candidate(s). Gap: measuring before changing and gathering evidence (APM, logs, profiler).
+> 'Async & concurrency' is partially covered (confidence 0.80, priority 0.95) and is the highest-value resolvable gap of 1 candidate(s). Gap: The candidate did not discuss async/await or common issues like sync-over-async..
 
-**Follow-up composed:** كيف هتقدر تعرف إن ال problem موجود في الداتابيز أم في الأندكت؟
+**Follow-up composed:** كيف تتعامل مع مشكلة التوافق بين السينك و الآسكيد في هذا السيناريو؟
 
-**Score:** 3/5 — يقول إن يبدأ بالداتابيز ويصيغ حلول للاستيريشن و الكاشينج لكنه لا يذكر الطريقة النظامية للمعاينة والتعديل.
+**Score:** 2/5 — يتحدث عن الداتابيز والكاش لكن لا يذكر الطريقة النظامية للمعاينة والتغيير ولا يتناول الامور المتعلقة بال وasync/await.
 
-- Covered: الداتابيز, استيريشن, كاشينج
-- Missed: الطريقة النظامية للمعاينة والتعديل
+- Covered: الداتابيز, التخزين
+- Missed: الطريقة النظامية للمعاينة والتغيير, async/await
 
 ## answer_3.mp3
 
@@ -84,18 +84,18 @@ falls back to the original answer. The branch is still exercised and logged.
 **Coverage**
 
 - Async & concurrency: `missing`
-- Data access (EF Core): `missing`
-- Diagnostic method: `partial`
+- Data access (EF Core): `partial`
+- Diagnostic method: `missing`
 - Caching & performance: `missing`
 
 **Branch decision:** move on and score
 
 > 3/4 competencies are absent (75% >= 60% threshold). The answer is thin across the board; one clarification cannot change the band.
 
-**Score:** 2/5 — أجاب على بعض الجوانب مثل إعادة تشغيل الخادم والموارد، لكنه لم يوضح كيفية التحقق من المشكلة أو استخدام أدوات التشخيص. لم يذكر الـ async/await أو الـ EF Core بشكل صحيح، ولم يتحدث عن الاستراتيجيات المحددة للاستناد إلى الدخول أو التخزين المؤقت.
+**Score:** 2/5 — يقول إنه يمكن إعادة تشغيل الخادم وزيادة الإمكانيات، لكنه لا يوضح طرق التحقيق النظامية أو استخدام أدوات التشخيص. لم يذكر الـ async/await أو الـ EF Core بشكل صحيح.
 
-- Covered: إعادة تشغيل الخادم
-- Missed: قياس المشكلة, استخدام أدوات التشخيص, الـ async/await, الـ EF Core
+- Covered: إعادة تشغيل السيرفر
+- Missed: قياس قبل التغيير, استخدام أدوات التشخيص, الـ async/await, الـ EF Core
 
 ---
 

@@ -289,6 +289,16 @@ def run_gate(
         GOLDEN_PATH.parent.mkdir(parents=True, exist_ok=True)
         GOLDEN_PATH.write_text(json.dumps(rows, ensure_ascii=False, indent=2), encoding="utf-8")
         print(f"\nBaseline written to {GOLDEN_PATH.relative_to(REPO_ROOT)}")
+        if not update_golden:
+            # Easy to miss, and it silently disables half the gate: with no
+            # committed baseline every run is a "first run", so score drift and
+            # branch flips are never actually compared against anything.
+            print(
+                "\n  NOTE: no baseline existed, so this run only CREATED one.\n"
+                "  Score-drift and branch-flip checks did not run. Commit\n"
+                f"  {GOLDEN_PATH.relative_to(REPO_ROOT)} for them to take effect\n"
+                "  on the next run."
+            )
 
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
     REPORT_PATH.write_text(render_report(rows, failures), encoding="utf-8")

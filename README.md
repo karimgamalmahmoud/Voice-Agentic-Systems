@@ -255,9 +255,26 @@ diarization, multi-question interviews, session persistence, auth, any
 containerization.
 
 **Known limits.** Single-user, in-memory state. All four models sit resident in
-VRAM (~10 GB of the T4's 15 GB) — fine for one session, wrong for a service.
+VRAM (~11 GB of the T4's 15 GB) — fine for one session, wrong for a service.
 The confidence numbers driving the branch are self-reported by a 7B model and
 are not calibrated; they work as a relative ranking, not as probabilities.
+
+Two more worth naming, because both are visible in the committed results:
+
+*Qwen-7B still transliterates technical terms into Arabic script* despite an
+explicit prompt rule against it — the latest run produced "السينك و الآسكيد" for
+"sync and async". It is readable to an Egyptian engineer but it is not what was
+asked for. I chose not to "fix" this with a substitution table of known terms:
+that list is unbounded, and a regex rewriting Arabic text would break more than
+it repairs. A larger model, or a fine-tune, is the real answer.
+
+*Score drift is only detected once a baseline is committed.* The gate writes
+`tests/golden/quality_gate.json` on its first run and compares against it
+thereafter. A fresh Colab clone has no baseline, so every such run creates one
+rather than comparing — meaning the drift and branch-flip checks pass
+vacuously. The gate now says so explicitly when it happens. Scores have in fact
+moved ±1 between runs at temperature 0.2, which is exactly the noise the
+tolerance exists for and exactly why the baseline needs to live in the repo.
 
 ## What I'd build next
 
