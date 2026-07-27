@@ -35,8 +35,10 @@ from .llm import LLMClient
 from .prompts import (
     COVERAGE_SYSTEM,
     COVERAGE_USER,
+    DEFAULT_FALLBACK_FOLLOW_UP,
     EVALUATE_SYSTEM,
     EVALUATE_USER,
+    FALLBACK_FOLLOW_UPS,
     FOLLOWUP_BLOCK,
     FOLLOWUP_SYSTEM,
     FOLLOWUP_USER,
@@ -271,6 +273,33 @@ class ScreeningAgent:
 
         return CoverageReport(assessments=[seen[n] for n in expected if n in seen])
 
+    @staticmethod
+    def follow_up_is_usable(text: str) -> bool:
+        """Reject questions that are truncated, empty, or rambling.
+
+        A real run produced "كيف تتعامل مع إبطال" - "How do you handle
+        invalidat", cut off mid-word. It passes a naive non-empty check and
+        would have been read aloud to the candidate.
+
+        The terminal question mark is the signal that actually catches this:
+        truncation almost never lands on one. Word count alone would have let
+        that four-word fragment through.
+        """
+        text = (text or "").strip()
+        if not text:
+            return False
+        words = text.split()
+        if not 4 <= len(words) <= 45:
+            return False
+        return text.endswith(("?", "؟"))
+
+    def fallback_follow_up(self, competency: Optional[str], language: str) -> str:
+        name = (competency or "").lower()
+        for key, variants in FALLBACK_FOLLOW_UPS.items():
+            if key in name:
+                return variants.get(language, variants["en"])
+        return DEFAULT_FALLBACK_FOLLOW_UP.get(language, DEFAULT_FALLBACK_FOLLOW_UP["en"])
+
     def compose_follow_up(
         self, transcript: Transcript, decision: FollowUpDecision, coverage: CoverageReport
     ) -> str:
@@ -278,20 +307,34 @@ class ScreeningAgent:
             (a for a in coverage.assessments if a.competency == decision.target_competency),
             None,
         )
-        raw = self.llm.complete(
-            FOLLOWUP_SYSTEM.format(
-                language_name=LANGUAGE_NAMES.get(transcript.language, "English")
-            ),
-            FOLLOWUP_USER.format(
-                question=INTERVIEW_QUESTION,
-                transcript=transcript.text,
-                competency=decision.target_competency or "",
-                gap=(target.gap if target else "") or "underdeveloped",
-            ),
-            temperature=0.4,
-            max_tokens=120,
-        ).strip().strip('"')
-        return strip_foreign_scripts(raw, context="follow-up question")
+        system = FOLLOWUP_SYSTEM.format(
+            language_name=LANGUAGE_NAMES.get(transcript.language, "English")
+        )
+        user = FOLLOWUP_USER.format(
+            question=INTERVIEW_QUESTION,
+            transcript=transcript.text,
+            competency=decision.target_competency or "",
+            gap=(target.gap if target else "") or "underdeveloped",
+        )
+
+        for attempt in (1, 2):
+            raw = self.llm.complete(
+                system,
+                user if attempt == 1 else user + "\n\nReturn ONE complete question, "
+                "ending in a question mark. Do not stop mid-sentence.",
+                # Resampling at the same temperature tends to reproduce the same
+                # truncation, so the retry is warmer.
+                temperature=0.4 if attempt == 1 else 0.8,
+                max_tokens=160,
+            ).strip().strip('"')
+            cleaned = strip_foreign_scripts(raw, context="follow-up question")
+            if self.follow_up_is_usable(cleaned):
+                return cleaned
+            logger.warning("Unusable follow-up on attempt %d: %r", attempt, cleaned)
+
+        fallback = self.fallback_follow_up(decision.target_competency, transcript.language)
+        logger.warning("Falling back to a templated probe for %r", decision.target_competency)
+        return fallback
 
     def evaluate(
         self,

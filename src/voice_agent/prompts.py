@@ -181,3 +181,45 @@ SPOKEN_RESULT = {
     "ar": "تقييمك {score} من 5. {justification}",
     "en": "Your score is {score} out of 5. {justification}",
 }
+
+
+# Fallback probes, used only when the model returns something unusable.
+#
+# This exists because a real run produced "كيف تتعامل مع إبطال" - "How do you
+# handle invalidat", truncated mid-word. A generated question targeted at the
+# specific gap is better than any of these; a half-sentence read aloud to a
+# candidate is much worse. These are the floor, not the goal.
+#
+# Keyed by substring of the competency name, matching agent.priority_of.
+FALLBACK_FOLLOW_UPS: dict[str, dict[str, str]] = {
+    "diagnostic method": {
+        "en": "Before changing anything, what would you measure first, and how would "
+              "you know your fix actually worked?",
+        "ar": "قبل ما تغير أي حاجة، إيه أول حاجة هتقيسها، وإزاي هتعرف إن الـ fix نفع فعلاً؟",
+    },
+    "async": {
+        "en": "Where exactly does async/await help under load, and how would you spot "
+              "a blocking call sitting in the request path?",
+        "ar": "الـ async/await بيساعد فين بالظبط تحت الـ load، وإزاي تكتشف إن في blocking "
+              "call في الـ request path؟",
+    },
+    "data access": {
+        "en": "How would you find out what SQL is actually being generated, and what "
+              "would you be looking for in it?",
+        "ar": "إزاي هتعرف الـ SQL اللي بيتولد فعلاً، وهتدور على إيه فيه؟",
+    },
+    "caching": {
+        "en": "What exactly would you cache here, and how would you decide when to "
+              "invalidate it?",
+        "ar": "هتعمل cache لإيه بالظبط، وإزاي هتقرر إمتى تعمل invalidation؟",
+    },
+    "tradeoff": {
+        "en": "Of everything you mentioned, what would you do first, and why that one?",
+        "ar": "من كل اللي قلته، إيه أول حاجة هتعملها، وليه دي بالذات؟",
+    },
+}
+
+DEFAULT_FALLBACK_FOLLOW_UP = {
+    "en": "Can you walk me through that part in more detail?",
+    "ar": "ممكن تشرحلي الجزء ده بتفصيل أكتر؟",
+}

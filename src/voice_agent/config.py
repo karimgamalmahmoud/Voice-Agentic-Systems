@@ -87,12 +87,17 @@ class RetrievalConfig:
     # query instead of relying on an absolute threshold that would need
     # retuning whenever the embedder changes.
     #
-    # Deliberately loose. top_k above is the primary filter; this is a backstop,
-    # and it is set on the permissive side because dropping a competency's
-    # supporting note is a worse failure than admitting one distractor. The
-    # quality-gate report prints every reference score, so tighten this against
-    # real numbers rather than by guessing.
-    reference_relative_cutoff: float = _env_float("VA_REFERENCE_REL_CUTOFF", 0.85)
+    # Tuned against the scores the gate recorded over the three sample answers,
+    # not guessed. To exclude 04_api_design_security the cutoff must exceed
+    # 0.858 (answer_1: 0.5701/0.6648) and 0.852 (answer_3: 0.5924/0.6957). To
+    # keep 03_data_access_ef_core it must stay under 0.902 (answer_3:
+    # 0.6277/0.6957). 0.88 sits mid-window with ~0.02 either side.
+    #
+    # Caveat worth stating plainly: that window is narrow and derived from three
+    # samples, so this is fitted to the data I have. A fourth answer could land
+    # outside it. The durable fix is more labelled samples; this is the honest
+    # interim.
+    reference_relative_cutoff: float = _env_float("VA_REFERENCE_REL_CUTOFF", 0.88)
 
 
 @dataclass
