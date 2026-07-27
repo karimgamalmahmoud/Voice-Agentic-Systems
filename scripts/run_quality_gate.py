@@ -97,6 +97,18 @@ def summarise(name: str, r: TurnResult) -> dict:
         "retrieved_references": sorted(
             {c.doc_id for c in r.retrieved if c.doc_id != "00_scoring_rubric"}
         ),
+        # Scores are recorded so the retrieval thresholds can be tuned against
+        # real numbers instead of guessed at.
+        "reference_scores": {
+            c.doc_id: round(c.score, 4)
+            for c in r.retrieved
+            if c.doc_id != "00_scoring_rubric"
+        },
+        "competency_scores": {
+            c.section.replace("Competency:", "").strip(): round(c.score, 4)
+            for c in r.retrieved
+            if c.doc_id == "00_scoring_rubric"
+        },
         "coverage": {a.competency: a.status.value for a in r.coverage.assessments},
         "followed_up": r.decision.should_follow_up,
         "decision_reason": r.decision.reason,
@@ -135,8 +147,10 @@ def render_report(rows: list[dict], failures: list[str]) -> str:
             f"## {r['sample']}",
             "",
             f"- **Language detected:** `{r['language']}` (Arabic script {r['arabic_ratio']:.0%}) · {r['duration_s']}s",
-            f"- **Competencies retrieved:** {', '.join(r['retrieved_competencies']) or '—'}",
-            f"- **Reference notes retrieved:** {', '.join(r['retrieved_references']) or '—'}",
+            "- **Competencies retrieved:** "
+            + (", ".join(f"{k} `{v}`" for k, v in r.get("competency_scores", {}).items()) or "—"),
+            "- **Reference notes retrieved:** "
+            + (", ".join(f"{k} `{v}`" for k, v in r.get("reference_scores", {}).items()) or "—"),
             "",
             "**Transcript**",
             "",

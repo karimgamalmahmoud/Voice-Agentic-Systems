@@ -60,6 +60,7 @@ from .schemas import (
     TurnResult,
 )
 from .stt import Transcriber
+from .text import strip_foreign_scripts
 from .tts import Synthesizer
 
 logger = logging.getLogger(__name__)
@@ -277,7 +278,7 @@ class ScreeningAgent:
             (a for a in coverage.assessments if a.competency == decision.target_competency),
             None,
         )
-        return self.llm.complete(
+        raw = self.llm.complete(
             FOLLOWUP_SYSTEM.format(
                 language_name=LANGUAGE_NAMES.get(transcript.language, "English")
             ),
@@ -290,6 +291,7 @@ class ScreeningAgent:
             temperature=0.4,
             max_tokens=120,
         ).strip().strip('"')
+        return strip_foreign_scripts(raw, context="follow-up question")
 
     def evaluate(
         self,
@@ -326,9 +328,11 @@ class ScreeningAgent:
         )
         return Evaluation(
             score=payload.get("score", 3),
-            justification=str(payload.get("justification", "")).strip(),
-            covered=[str(x) for x in (payload.get("covered") or [])][:4],
-            missed=[str(x) for x in (payload.get("missed") or [])][:4],
+            justification=strip_foreign_scripts(
+                str(payload.get("justification", "")).strip(), context="justification"
+            ),
+            covered=[strip_foreign_scripts(str(x)) for x in (payload.get("covered") or [])][:4],
+            missed=[strip_foreign_scripts(str(x)) for x in (payload.get("missed") or [])][:4],
         )
 
     def speak_evaluation(

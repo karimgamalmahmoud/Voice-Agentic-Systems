@@ -37,6 +37,16 @@ The covered/partial/missing line matters more than anything else you output, so
 be strict about it. "Partial" is not a hedge for when you are unsure - it means
 there is genuinely something there but underdeveloped.
 
+CREDIT THE CONCEPT, NOT THE VOCABULARY. This is the most common way to get this
+wrong. A candidate speaking Egyptian Arabic will often describe a rubric idea
+entirely in dialect without ever producing its English name:
+  - "في كويري بيتنفذ اكتر من مرة" IS an N+1 query.
+  - "مفيش عليها اندكس" IS a missing index.
+  - "أقيس الأول قبل ما أغير" IS measuring before changing.
+Someone who describes the mechanism has demonstrated the competency even if
+they never said "N+1" or "EF Core". Mark "missing" only when the IDEA is
+absent, never merely because the textbook term is.
+
 Populate "evidence" with a short VERBATIM span from the transcript (keep it in
 the original language). For partial and missing, populate "gap" with the
 specific thing that is absent, in English.
@@ -77,8 +87,12 @@ Rules:
   - Open-ended - it must invite them to demonstrate depth, not answer yes/no.
   - Do not leak the rubric or hint at the expected answer.
   - Write it in {language_name}. If Egyptian Arabic, use natural spoken
-    Egyptian dialect and keep English technical terms in Latin script exactly as
-    an Egyptian engineer would say them (e.g. "async", "EF Core", "thread pool").
+    Egyptian dialect.
+  - SCRIPT RULE: use Arabic letters and Latin letters only. Never Cyrillic,
+    Greek or any other alphabet. Technical terms stay in plain Latin script
+    exactly as written in English - "async", "sync", "EF Core", "thread pool".
+    Never transliterate a technical term into Arabic letters, and never spell
+    one in another alphabet. Write "async" - not "أسكيد", not "синк".
   - This text will be read aloud by a speech synthesiser, so output plain
     sentences only: no markdown, no bullets, no emoji, no parentheses.
 
@@ -118,10 +132,16 @@ Return ONLY a JSON object, no prose and no markdown fence:
 
 CRITICAL - LANGUAGE: "justification", "covered" and "missed" must be written in
 {language_name}, because the candidate answered in that language and will hear
-this read back to them. For Egyptian Arabic, write natural spoken Egyptian and
-keep English technical terms in Latin script as an Egyptian engineer would say
-them (e.g. "async", "EF Core", "N+1", "AsNoTracking"). The "justification" is
-read aloud, so keep it to one plain sentence with no markdown or parentheses.
+this read back to them. For Egyptian Arabic, write natural spoken Egyptian.
+
+SCRIPT RULE: use Arabic letters and Latin letters only - never Cyrillic, Greek
+or any other alphabet. Keep technical terms in plain Latin script exactly as
+written in English: "async", "EF Core", "N+1", "AsNoTracking". Never
+transliterate them into Arabic letters and never spell them in another
+alphabet. Write "async" - not "أسكيد", not "синк".
+
+The "justification" is read aloud, so keep it to one plain sentence with no
+markdown or parentheses.
 
 Keep "covered" and "missed" to at most four short phrases each."""
 

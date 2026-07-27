@@ -75,8 +75,24 @@ class RetrievalConfig:
     # BGE-M3 is genuinely multilingual: Arabic queries retrieve against an
     # English corpus without a translation hop.
     model_id: str = os.getenv("VA_EMBED_MODEL", "BAAI/bge-m3")
+    # Competencies: 4 of the rubric's 5 scoring targets.
     top_k: int = int(os.getenv("VA_RETRIEVAL_TOP_K", "4"))
+    # References are a separate, smaller pool - only five notes exist, so a k of
+    # 4 was returning nearly all of them and guaranteed at least one distractor
+    # every run. The quality gate caught this. Three is the real filter.
+    reference_top_k: int = int(os.getenv("VA_REFERENCE_TOP_K", "3"))
     min_score: float = _env_float("VA_RETRIEVAL_MIN_SCORE", 0.30)
+    # Relative gate: drop any reference scoring well below the best hit, so a
+    # weak match cannot ride in just because k has a slot left. Adapts to the
+    # query instead of relying on an absolute threshold that would need
+    # retuning whenever the embedder changes.
+    #
+    # Deliberately loose. top_k above is the primary filter; this is a backstop,
+    # and it is set on the permissive side because dropping a competency's
+    # supporting note is a worse failure than admitting one distractor. The
+    # quality-gate report prints every reference score, so tighten this against
+    # real numbers rather than by guessing.
+    reference_relative_cutoff: float = _env_float("VA_REFERENCE_REL_CUTOFF", 0.85)
 
 
 @dataclass

@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging
 import re
-import unicodedata
 from pathlib import Path
 from typing import Optional, Union
 
@@ -18,41 +17,11 @@ import numpy as np
 
 from .config import CONFIG, STTConfig
 from .schemas import Transcript
+from .text import script_language  # re-exported: callers import it from here
 
 logger = logging.getLogger(__name__)
 
-_ARABIC_RANGES = (
-    (0x0600, 0x06FF),  # Arabic
-    (0x0750, 0x077F),  # Arabic Supplement
-    (0x08A0, 0x08FF),  # Arabic Extended-A
-    (0xFB50, 0xFDFF),  # Arabic Presentation Forms-A
-    (0xFE70, 0xFEFF),  # Arabic Presentation Forms-B
-)
-
-
-def _is_arabic_char(ch: str) -> bool:
-    cp = ord(ch)
-    return any(lo <= cp <= hi for lo, hi in _ARABIC_RANGES)
-
-
-def script_language(text: str) -> tuple[str, float]:
-    """Classify language by script, returning (lang, arabic_ratio).
-
-    We classify from the decoded text rather than from Whisper's own language
-    token on purpose. Whisper detects per 30-second chunk, so a code-mixed
-    answer can flip mid-file and produce a mixed-script transcript. Counting
-    Arabic letters over the whole output is stable, and it gives exactly the
-    binary we need: which language do we reply in.
-    """
-    letters = [c for c in text if unicodedata.category(c).startswith("L")]
-    if not letters:
-        return "en", 0.0
-    arabic = sum(1 for c in letters if _is_arabic_char(c))
-    ratio = arabic / len(letters)
-    # Threshold is low because code-mixed Egyptian Arabic carries a lot of
-    # Latin-script technical vocabulary ("async", "EF Core", "thread pool").
-    # An answer that is 25% Arabic script is an Arabic answer.
-    return ("ar" if ratio >= 0.15 else "en"), ratio
+__all__ = ["Transcriber", "script_language"]
 
 
 def _collapse_repeats(text: str) -> str:

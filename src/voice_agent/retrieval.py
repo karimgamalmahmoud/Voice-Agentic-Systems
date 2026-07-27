@@ -194,11 +194,34 @@ class CorpusIndex:
         return kept
 
     def retrieve_references(self, query: str, top_k: Optional[int] = None) -> list[RetrievedChunk]:
-        """Supporting technical detail from the 01-05 reference notes."""
-        k = top_k or self.cfg.top_k
+        """Supporting technical detail from the 01-05 reference notes.
+
+        Two gates, because one was not enough. The absolute `min_score` floor
+        barely bites - everything in this corpus is broadly about .NET backends,
+        so even the API-security note clears it. The relative cutoff is what
+        actually excludes distractors: a note has to score close to the best hit
+        to earn a slot, not merely above a fixed floor.
+
+        This exists because the quality gate failed. `04_api_design_security`
+        was being retrieved for all three sample answers - it mentions timeouts
+        and cascading failures, which is a genuine semantic match for "endpoint
+        times out under load" even though the rubric never scores it.
+        """
+        k = top_k or self.cfg.reference_top_k
         idx = [i for i, c in enumerate(self.chunks) if c.doc_id != RUBRIC_DOC_ID]
         hits = self._search(query, idx, len(idx))
-        return [h for h in hits if h.score >= self.cfg.min_score][:k]
+        kept = [h for h in hits if h.score >= self.cfg.min_score]
+        if kept:
+            floor = kept[0].score * self.cfg.reference_relative_cutoff
+            dropped = [h for h in kept if h.score < floor]
+            if dropped:
+                logger.info(
+                    "Dropped %s below relative floor %.3f",
+                    [(h.doc_id, round(h.score, 3)) for h in dropped],
+                    floor,
+                )
+            kept = [h for h in kept if h.score >= floor]
+        return kept[:k]
 
 
 def format_competencies(chunks: list[RetrievedChunk]) -> str:
