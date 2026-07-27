@@ -118,11 +118,63 @@ itself a signal even though each is individually within tolerance.
 
 ---
 
+---
+
+## Phase 6 — The debug loop, which is where most of the value was
+
+Everything above is pre-flight. The interesting work started once it ran on a
+real GPU, and the pattern that mattered was **feeding failures back as
+constraints, not just as fixes**.
+
+**Round 1 — install.** Ollama's installer needed `zstd`, absent from the Colab
+image. Trivial fix. The non-trivial part was noticing the UI cell blocked
+forever under `Run all`, so the tests and the quality gate below it had never
+executed. Reordered so the blocking launch is last.
+
+**Round 2 — the timeout that was not a timeout.** Every LLM call timed out. The
+obvious read is "raise the timeout"; the actual cause was VRAM. The notebook
+preloaded Whisper and BGE-M3 into the kernel, then ran the scripts via
+`!python`, and each subprocess loaded a *second* copy. Ollama could not fit and
+silently fell back to CPU. The health check passed throughout because it only
+lists models and never runs inference, which is what made it look like a network
+problem. Fix was structural — load the LLM onto the GPU first, run everything
+in-kernel — plus an `ollama ps` check and a tok/s probe so the CPU fallback can
+never again be invisible.
+
+The prompt that got there was roughly: *"don't just raise the timeout — the
+health check passes and generation doesn't, so tell me what differs between
+those two paths."*
+
+**Rounds 3-4 — defects the gate found.** Retrieval pulling a distractor,
+coverage under-crediting dialect, a follow-up truncated mid-word, and an English
+answer probed in Arabic. Detailed in the README table.
+
+Two lessons worth stating:
+
+*Thresholds guessed are thresholds wrong.* I first set the retrieval cutoff to
+0.92 by feel, then realised I had no idea of the score distribution and loosened
+it to 0.85 with a comment saying to tune it on real numbers. When the gate
+printed the scores, the viable window turned out to be 0.858-0.902 — my original
+guess would have silently dropped a needed document. The fix was making the gate
+report its scores, not thinking harder about the number.
+
+*A gate only guards what it knows about.* It passed while shipping an Arabic
+follow-up to an English answer, because language fidelity was asserted on the
+score and nobody had thought about the question. Every check added since covers
+both ends of the pair.
+
+---
+
 ## What I would do differently
 
 I wrote the Gradio UI before running the pipeline end to end on a GPU. The
-CPU-only tests (26, all passing) cover the decision policy, corpus chunking and
-language detection, but the first genuine end-to-end run happens in Colab. On a
-longer timeline I would have stood up the notebook and run the transcription
-spike against real weights before building any UI — the brief's own advice, and
-I half-followed it.
+CPU-only tests cover the decision policy, corpus chunking and language
+detection, but the first genuine end-to-end run happened well after the UI
+existed. On a longer timeline I would have stood up the notebook and run the
+transcription spike against real weights before building any UI — the brief's
+own advice, and I half-followed it.
+
+I would also have made the quality gate print its retrieval scores from the
+start. Two of the four real defects were found by *reading* its output rather
+than by an assertion, and the one threshold I guessed at was wrong. A report
+that shows its working beats a report that says PASS.

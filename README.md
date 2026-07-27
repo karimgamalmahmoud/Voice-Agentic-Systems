@@ -195,6 +195,22 @@ Runs all three provided samples end to end and writes
 transcript, what was retrieved, the branch decision and its reason, and the
 score.
 
+**It earned its keep.** On the first full run it failed, and everything it
+caught was a real defect:
+
+| What the gate caught | Root cause | Fix |
+|---|---|---|
+| `04_api_design_security` retrieved for all 3 samples | reference `top_k=4` against a pool of only 5 notes — not a filter | own `top_k=3` + a relative-score floor, tuned on the recorded scores |
+| — (found by reading its output) | coverage marked EF Core `missing` for an answer that described N+1 and a missing index *in dialect* | prompt now credits the concept, not the English vocabulary |
+| — (found by reading its output) | a follow-up truncated mid-word: `"كيف تتعامل مع إبطال"` | validate before use, retry warmer, fall back to a templated probe |
+| An English answer answered with an **Arabic** follow-up | language fidelity was checked on the score but never on the question | check both ends; the gate now asserts the question's script too |
+
+That last row is the useful one: the gate was passing while shipping a
+wrong-language question, because it only guarded the output it knew about.
+Two of the four were found by reading the report rather than by an assertion —
+which is exactly why the report prints transcripts, retrieval scores and branch
+reasoning instead of just a pass/fail.
+
 **How I'd know if a change made the system worse.** The gate pins the things
 that should never move and tolerates the one thing that legitimately does.
 Retrieval precision is binary: the corpus contains two reference notes
